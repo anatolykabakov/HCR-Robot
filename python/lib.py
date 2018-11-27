@@ -4,8 +4,13 @@ import serial
 import math
 import numpy as np
 import bisect
-L = 0.135
+from datetime import datetime
+from datetime import timedelta
+
+start_time = datetime.now()
+L = 0.275
 k = 0.5  # control gain
+
 Kp = 1.0  # speed propotional gain
 class EKF():
     def __init__(self):
@@ -243,10 +248,16 @@ class Spline2D:
         return yaw
 
 class Serial(object):
-    def __init__(self, port, speed):
+    def __init__(self, port, speed, timeinterval):
         """Instantiate the object."""
         super(Serial, self).__init__()
         self.connect = serial.Serial(port, speed)
+        self.timeinterval = timeinterval
+        self.velocity = 0
+        self.yaw = 0
+        self.x = 0
+        self.y = 0
+        
 
     def openconnect(self, port, speed):
         connect = serial.Serial(port, speed)
@@ -255,23 +266,28 @@ class Serial(object):
         return connect
     
     def getSerialData(self):
+
         data = self.connect.readline()
-        self.flushInput()
+        data = data.decode().replace('\r\n', '')
+        data = data.split('; ')
+        self.connect.flushInput()
         if len(data)==5:
-            data = data.decode().replace('\r\n', '')
-            data = data.split('; ')
-            velocity = float(data[0])
-            yaw    = float(data[1])
-            x = float(data[2])
-            y = float(data[3])
+            self.velocity = float(data[0])
+            self.yaw    = float(data[1])
+            self.x = float(data[2])
+            self.y = float(data[3])
             print('receive: '+ str(data))
-            return velocity, yaw, x, y
+            return self.velocity, self.yaw, self.x, self.y
+        return self.velocity, self.yaw, self.x, self.y
 
     def receiving(self):
+        '''
+        получаем данные из порта
+        '''
+        buffer_string = self.connect.read(self.connect.inWaiting())
     
-        buffer_string = self.connect.read(self.inWaiting())
-    
-        lines = buffer_string.decode().split('\n') 
+        lines = buffer_string.decode().split('\n')
+        #print(lines)
         last_received = lines[-2]
         data = last_received.split(';')
         velocity = float(data[0])
@@ -280,12 +296,12 @@ class Serial(object):
         y = float(data[3])
         buffer_string = lines[-1]
 
-        print('receive: '+ str(data))
+        print('receive: '+ str(data) + ' ' + str(millis()))
         return velocity, yaw, x, y
 
     def setSerialData(self, data):
         self.connect.write(data.encode())
-        time.sleep(self.dt)
+        time.sleep(self.timeinterval)
 
 class Planning(object):
     def __init__(self):
@@ -320,6 +336,16 @@ class Planning(object):
         return target_idx, error_front_axle
     
     def calc_spline_course(self, x, y, ds=0.1):
+##            '''
+##        интерполирует заданную траекторию кубическим сплайном
+##        вход:
+##        x - массив координат по x
+##        y - массив координат по y
+##        выход:
+##        rx - массив референсных координат по x в метрах
+##        ry - массив референсных координат по y в метрах
+##        ryaw - массив референсных направления в рад
+##        '''
         sp = Spline2D(x, y)
         s = list(np.arange(0, sp.s[-1], ds))
         rx, ry, ryaw, rk = [], [], [], []
@@ -332,35 +358,62 @@ class Planning(object):
         return rx, ry, ryaw, rk, s
 
 class Tracking(object):
-    def __init__(self, robot, planning, mode):
+    def __init__(self, robot, planning, serial, mode, dt = 0.5):
         """Instantiate the object."""
         super(Tracking, self).__init__()
         self.robot    = robot
         self.planning = planning
+        self.serial = serial
         self.mode = mode
+        self.dt = dt
         
     def pid_control(self, target, current):
-        """
-         Proportional control for the speed.
-        """
-        Kp = 1
+##        '''
+##        контроль скорости
+##
+##        П-регулятор
+##
+##        алгоритм:
+##        1. сравнивает заданную скорость движения с текущей,
+##        если они не равны умножаем разницу на кожффициент усиления 
+##        '''
+##        """
+##         Proportional control for the speed.
+##        """
+        Kp = 2
         return Kp * (target - current)
         
-    def steer_control(self, cx, cy, cyaw, dt=0.1):
+    def steer_control(self, cx, cy, cyaw):
+##        '''
+##        функция реализует контроль ориентации робота
+##        алгоритм:
+##        1. определяем текущую референсную точку, к которой стремимся
+##        2. определяем направление референсной точки
+##        3. определяем разницу между направлением референскной точкой и текущим направлением робота
+##        4. вычисляем разницу - угол на который нужно повернуть.
+##        5. вычисляем необходимую угловую скорость, чтобы повернуть к референсному направлению за промежуток времени
+##        '''
         current_target_idx, error_front_axle = self.planning.calc_target_index(self.robot, cx, cy)
         delta = normalize_angle(cyaw[current_target_idx] - self.robot.yaw)
         #print(str(cyaw[current_target_idx])+' - '+str(self.robot.yaw))
-        omega = delta/self.robot.dt
+        omega = delta/self.dt
         return omega, current_target_idx
         
     def motioncontrol(self, cx, cy, cyaw, target_speed=1):
+##        '''
+##        функция реализует контроль движения по заданной траектории
+##        включает в себя :
+##        1. контроль позиционирования - определение текущего местоположения
+##        2. контроль ориентации - поддержание заданного курса
+##        3. отправку управляющих воздействий в порт
+##        '''
         last_idx = len(cx) - 1
         target_idx, _ = self.planning.calc_target_index(self.robot, cx, cy)
         x   = [self.robot.x]
         y   = [self.robot.y]
         while last_idx > target_idx:
             if self.mode == 'robot':
-                v, w, robotx, roboty = serial.receiving()
+                v, w, robotx, roboty = self.serial.getSerialData()
                 w = normalize_angle(w)
                 self.robot.set(v, w, robotx, roboty )
             ai                = self.pid_control(target_speed, self.robot.v)
@@ -369,7 +422,7 @@ class Tracking(object):
                 self.robot.update(ai, omega)
             if self.mode == 'robot':
                 v = ai*self.robot.dt
-                self.robot.move(v, omega)
+                self.robot.move(self.serial, v, omega)
             x.append(self.robot.x)
             y.append(self.robot.y)
             plotxy(x,y, cx, cy)
@@ -389,12 +442,28 @@ class Robot(object):
         self.dt = dt
         
     def set(self,v, yaw, x, y):
+##        '''
+##        вход:
+##        x - положение в метрах
+##        y - положение в метрах
+##        yaw - курс в рад
+##        v - скорость в метрах в секунду
+##
+##        действие:
+##        устанавливает текушие скорость угол и положение 
+##        '''
         self.x = x
         self.y = y
         self.yaw = yaw
         self.v = v
 
     def update(self, acceleration, omega, dt=None):
+##        '''
+##        обновление состояния робота по модели одноколесного велосипеда
+##        acceleration - ускорение
+##        omega - угловая скорость
+##        dt=None - промежуток времени
+##        '''
         self.v = acceleration*self.dt
         self.omega = omega
         self.yaw += self.omega*self.dt
@@ -405,10 +474,13 @@ class Robot(object):
     def getPos(self):
         return self.x, self.y
       
-    def move(self, velocity, omega):
+    def move(self, obj, velocity, omega):
+##        '''
+##        посылает угловую и линейную скорость в порт
+##        '''
         data = str(velocity) + ' ' + str(omega)
-        print('send: '+ data)
-        self.setSerialData(data)
+        print('send: '+ data + ' ' + str(millis()))
+        obj.setSerialData(data)
 
     
     
@@ -651,7 +723,10 @@ def get_gps_data(model):
     z1 = np.matrix([zx, zy])
     return z, z1
 
-
+def millis():
+   dt = datetime.now() - start_time
+   ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
+   return ms
 
 def plotM(hxTrue, hxK, hz, hz1):
     plt.cla()
