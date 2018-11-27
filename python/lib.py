@@ -301,7 +301,7 @@ class Serial(object):
 
     def setSerialData(self, data):
         self.connect.write(data.encode())
-        time.sleep(self.timeinterval)
+        #time.sleep(self.timeinterval)
 
 class Planning(object):
     def __init__(self):
@@ -399,7 +399,7 @@ class Tracking(object):
         omega = delta/self.dt
         return omega, current_target_idx
         
-    def motioncontrol(self, cx, cy, cyaw, target_speed=1):
+    def motioncontrol(self, cx, cy, cyaw, target_speed=0.3):
 ##        '''
 ##        функция реализует контроль движения по заданной траектории
 ##        включает в себя :
@@ -422,7 +422,7 @@ class Tracking(object):
                 self.robot.update(ai, omega)
             if self.mode == 'robot':
                 v = ai*self.robot.dt
-                self.robot.move(self.serial, v, omega)
+                self.robot.move(self.serial, target_speed, omega)
             x.append(self.robot.x)
             y.append(self.robot.y)
             plotxy(x,y, cx, cy)

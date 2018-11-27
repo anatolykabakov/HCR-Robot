@@ -130,9 +130,9 @@ void CheckSettingsSpeed(){
 }
 // --------------- Чтение порта --------------------
 void ReadPort(){
-  while (Serial1.available() > 0) {  // чтение строки из последовательного порта
+  while (Serial.available() > 0) {  // чтение строки из последовательного порта
       //---------------------------
-      String line = Serial1.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
+      String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
       line.toCharArray(buffer,10);//переводим в char
       LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
       AngularVelocity       = atof(strtok(NULL,  " "));
@@ -153,8 +153,8 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial1.begin(9600);//Initialize the Serial1 port
-  while (!Serial1) ; // while the Serial1 stream is not open, do nothing
+  Serial.begin(9600);//Initialize the Serial port
+  while (!Serial) ; // while the Serial stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder
   PIDInit();  
@@ -242,13 +242,13 @@ void Timer_finish()  {
 
 void Print() {    // ==================== Вывод данных в порт
 
-    Serial1.print (V); Serial1.print ("; ");
-    Serial1.print (yaw); Serial1.print ("; ");
-    //Serial1.print (omega); Serial1.print ("; ");
-    Serial1.print (x); Serial1.print ("; ");
-    Serial1.print (y); Serial1.print ("; ");
-    Serial1.print(millis());
-    Serial1.println();
+    Serial.print (V); Serial.print ("; ");
+    Serial.print (yaw); Serial.print ("; ");
+    //Serial.print (omega); Serial.print ("; ");
+    Serial.print (x); Serial.print ("; ");
+    Serial.print (y); Serial.print ("; ");
+    Serial.print(millis());
+    Serial.println();
  }
 void Movement(int a,int b){//move
   analogWrite (MotorRpwm,a);      //motor1 move forward at speed a
