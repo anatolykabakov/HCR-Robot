@@ -380,7 +380,7 @@ class Tracking(object):
 ##        """
 ##         Proportional control for the speed.
 ##        """
-        Kp = 2
+        Kp = 1
         return Kp * (target - current)
         
     def steer_control(self, cx, cy, cyaw):
@@ -407,17 +407,17 @@ class Tracking(object):
 ##        2. контроль ориентации - поддержание заданного курса
 ##        3. отправку управляющих воздействий в порт
 ##        '''
-        last_idx = len(cx) - 1
-        target_idx, _ = self.planning.calc_target_index(self.robot, cx, cy)
-        x   = [self.robot.x]
+        last_idx = len(cx) - 1# номер последней точки (массива) пути
+        target_idx, _ = self.planning.calc_target_index(self.robot, cx, cy)# номер ближайшей точки
+        x   = [self.robot.x]# массив коорд точек пройденной траектории
         y   = [self.robot.y]
         while last_idx > target_idx:
             if self.mode == 'robot':
-                v, w, robotx, roboty = self.serial.getSerialData()
+                v, w, robotx, roboty = self.serial.getSerialData()# получаем из Ардуино: скорость, угол в рад, коорд-ы
                 w = normalize_angle(w)
                 self.robot.set(v, w, robotx, roboty )
             ai                = self.pid_control(target_speed, self.robot.v)
-            omega, target_idx = self.steer_control(cx, cy, cyaw)
+            omega, target_idx = self.steer_control(cx, cy, cyaw)# выход: угловая скорость поворота, и номер следующей точки
             if self.mode == 'pc':
                 self.robot.update(ai, omega)
             if self.mode == 'robot':
