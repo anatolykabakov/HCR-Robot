@@ -396,7 +396,7 @@ class Tracking(object):
         current_target_idx, error_front_axle = self.planning.calc_target_index(self.robot, cx, cy)
         delta = normalize_angle(cyaw[current_target_idx] - self.robot.yaw)
         #print(str(cyaw[current_target_idx])+' - '+str(self.robot.yaw))
-        omega = delta/self.dt
+        omega = delta/1
         return omega, current_target_idx
         
     def motioncontrol(self, cx, cy, cyaw, target_speed=0.3):
