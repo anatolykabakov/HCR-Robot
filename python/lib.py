@@ -6,6 +6,7 @@ import numpy as np
 import bisect
 from datetime import datetime
 from datetime import timedelta
+from protocol import openconnect, send_msg, recieve, process_data
 
 start_time = datetime.now()
 L = 0.275
@@ -251,34 +252,63 @@ class Serial(object):
     def __init__(self, port, speed, timeinterval):
         """Instantiate the object."""
         super(Serial, self).__init__()
-        self.connect = serial.Serial(port, speed)
+        #self.connect = serial.Serial(port, speed)
         self.timeinterval = timeinterval
         self.velocity = 0
         self.yaw = 0
         self.x = 0
         self.y = 0
+        self.connect = self.open_connect(port, speed)
         
 
-    def openconnect(self, port, speed):
-        connect = serial.Serial(port, speed)
-        print("open port")
-        time.sleep(1)
+    def open_connect(self, port, speed):
+##        connect = serial.Serial(port, speed)
+##        print("open port")
+##        time.sleep(1)
+        connect = openconnect(port, speed)
         return connect
     
     def getSerialData(self):
+        data = recieve(self.connect)
+        self.velocity, self.yaw, self.x, self.y = process_data(data)
 
-        data = self.connect.readline()
-        data = data.decode().replace('\r\n', '')
-        data = data.split('; ')
-        self.connect.flushInput()
-        if len(data)==5:
-            self.velocity = float(data[0])
-            self.yaw    = float(data[1])
-            self.x = float(data[2])
-            self.y = float(data[3])
-            print('receive: '+ str(data))
-            return self.velocity, self.yaw, self.x, self.y
+##        data = self.connect.readline()
+##        data = data.decode().replace('\r\n', '')
+##        data = data.split('; ')
+##        self.connect.flushInput()
+##        if len(data)==5:
+##            self.velocity = float(data[0])
+##            self.yaw    = float(data[1])
+##            self.x = float(data[2])
+##            self.y = float(data[3])
+##            print('receive: '+ str(data))
+##            return self.velocity, self.yaw, self.x, self.y
+        
         return self.velocity, self.yaw, self.x, self.y
+    
+##    def openconnect(port, speed):
+##        connect = serial.Serial(port, speed)
+##        time.sleep(1)
+##        is_connected = False
+##        while not is_connected:
+##            print("Waiting for arduino...")
+##            connect.write(start_connect.encode())
+##            connect_flag = connect.read(1).decode()
+##            check_connect(connect)
+##            if not connect_flag:
+##                time.sleep(0.1)
+##                continue
+##            if connect_flag == 'r':
+##                is_connected = True
+##        return connect
+##
+##    def process_data(data):
+##    data = data.split(';')
+##    velocity = float(data[0])
+##    yaw    = float(data[1])
+##    x = float(data[2])
+##    y = float(data[3])
+##    return velocity, yaw, x, y
 
     def receiving(self):
         '''
@@ -299,8 +329,9 @@ class Serial(object):
         print('receive: '+ str(data) + ' ' + str(millis()))
         return velocity, yaw, x, y
 
-    def setSerialData(self, data):
-        self.connect.write(data.encode())
+    def setSerialData(self, velocity, omega):
+        #self.connect.write(data.encode())
+        send_msg(self.connect, velocity, omega)
         #time.sleep(self.timeinterval)
 
 class Planning(object):
@@ -478,9 +509,9 @@ class Robot(object):
 ##        '''
 ##        посылает угловую и линейную скорость в порт
 ##        '''
-        data = str(velocity) + ' ' + str(omega)
-        print('send: '+ data + ' ' + str(millis()))
-        obj.setSerialData(data)
+        #data = str(velocity) + ' ' + str(omega)
+        #print('send: '+ data + ' ' + str(millis()))
+        obj.setSerialData(velocity, omega)
 
     
     

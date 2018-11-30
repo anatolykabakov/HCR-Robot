@@ -30,9 +30,6 @@
 #include <TroykaIMU.h>
 #include <Wire.h>
 
-
-
-LiquidCrystal lcd(50, 49, 48, 47, 46, 45);
 // MegaADK DIGITAL PINS USABLE FOR INTERRUPTS 2, 3, 18, 19, 20, 21
 //                                                 I2C pins 20, 21
 
@@ -102,6 +99,7 @@ double x = 0;
 double y = 0;
 
 bool printflag = false;
+bool is_connected = false;
 
 void setup() {
    Init();
@@ -109,12 +107,10 @@ void setup() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Главный цикл ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 void loop() { 
   // --------------- Чтение порта --------------------
-  ReadPort();
+  get_messages_from_serial();
   // --------------- Смена уставки скорости ----------
   Motor();
   // -------------------------------------------------
-  //if (printflag) {printflag = false; Print();}
-  delay(10);
  }
  //loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void Motor(){
@@ -128,26 +124,11 @@ void SetSpeed(double LinearVelocity, double AngularVelocity){
 void CheckSettingsSpeed(){
   if (settingSpeed){
       settingSpeed = false;
-      Print();
-      //printflag = true;
       SetSpeed(LinearVelocity, AngularVelocity);
     }
 }
 // --------------- Чтение порта --------------------
-void ReadPort(){
-  while (Serial.available() > 0) {  // чтение строки из последовательного порта
-      //---------------------------
-      String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
-      line.toCharArray(buffer,10);//переводим в char
-      LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
-      AngularVelocity       = atof(strtok(NULL,  " "));
-      if (line.length() > 0){settingSpeed = true;}
-      if(line == "reset"){reset_var();}
-      //if(left == 80){Print();}
-      
-      //---------------------------
-    }
-}
+
 void reset_var(){
   x = 0;
   y = 0;
@@ -158,8 +139,7 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial.begin(9600);//Initialize the Serial port
-  lcd.begin(16, 2);
+  Serial.begin(115200);//Initialize the Serial port
   while (!Serial) ; // while the Serial stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder
@@ -243,20 +223,8 @@ void Timer_finish()  {
   wheelImpR = 0;
   wheelImpL = 0;
 
-  //printflag = true;
+
 }
-
-void Print() {    // ==================== Вывод данных в порт
-
-    Serial.print (V); Serial.print ("; ");
-    Serial.print (yaw); Serial.print ("; ");
-    //Serial.print (omega); Serial.print ("; ");
-    Serial.print (x); Serial.print ("; ");
-    Serial.print (y); Serial.print ("; ");
-    //Serial.print(millis());
-    //Serial.println();
-    PrintLCD();
- }
 void Movement(int a,int b){//move
   analogWrite (MotorRpwm,a);      //motor1 move forward at speed a
   digitalWrite(MotorRdir,DirectionR);  
@@ -286,17 +254,61 @@ void PIDMovement(double a,double b){
   Movement (int (Output1), int(Output2));
 }
 
-void PrintLCD(){  // ==================== Вывод данных на дисплей
+void get_messages_from_serial()
+{
+  if(Serial.available() > 0)
+  {
+    // The first byte received is the instruction
+    int order_received = Serial.read();
 
-  // Дисплей, первая строка
-  String FS = "HELLO";  // бамперы  
-  // Дисплей, вторая строка
+    if(order_received == 's')
+    {
+      // If the cards haven't say hello, check the connection
+      if(!is_connected)
+      {
+        is_connected = true;
+        Serial.print("r");
+      }
+    }
+    else
+    {
+      switch(order_received)
+      {
 
-  lcd.setCursor(0, 0);
-  lcd.print(LinearVelocity);
-  lcd.setCursor(0, 1);
-  lcd.print(AngularVelocity);
+        case 'v'://если v, то считываем уставку по скорости
+        {
 
-} 
+          String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
+          line.toCharArray(buffer,10);//переводим в char
+          LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
+          AngularVelocity       = atof(strtok(NULL,  " "));
+          settingSpeed = true;
+
+          break;
+        }
+        case 'd'://если d, то печатаем текущие значения
+        {
+          if(V>=0){Serial.print ("+");Serial.print (V); Serial.print (";");}
+          else {Serial.print (V); Serial.print (";");}
+          if(yaw>=0){Serial.print ("+");Serial.print (yaw); Serial.print (";");}
+          else {Serial.print (yaw); Serial.print (";");}
+          if(x>=0){Serial.print ("+");Serial.print (x); Serial.print (";");}
+          else {Serial.print (x); Serial.print (";");}
+          if(y>=0){Serial.print ("+");Serial.print (y); Serial.print (";");}
+          else {Serial.print (y); Serial.print (";");}
+          
+          break;
+        }
+        // Unknown order
+        default:
+
+          return;
+      }
+    }
+    Serial.print("c");
+ 
+  }
+}
       
+
 

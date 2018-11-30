@@ -30,9 +30,6 @@
 #include <TroykaIMU.h>
 #include <Wire.h>
 
-
-
-LiquidCrystal lcd(50, 49, 48, 47, 46, 45);
 // MegaADK DIGITAL PINS USABLE FOR INTERRUPTS 2, 3, 18, 19, 20, 21
 //                                                 I2C pins 20, 21
 
@@ -113,7 +110,7 @@ void loop() {
   // --------------- Смена уставки скорости ----------
   Motor();
   // -------------------------------------------------
-  //if (printflag) {printflag = false; Print();}
+  if (printflag) {printflag = false; Print();}
   delay(10);
  }
  //loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,16 +125,14 @@ void SetSpeed(double LinearVelocity, double AngularVelocity){
 void CheckSettingsSpeed(){
   if (settingSpeed){
       settingSpeed = false;
-      Print();
-      //printflag = true;
       SetSpeed(LinearVelocity, AngularVelocity);
     }
 }
 // --------------- Чтение порта --------------------
 void ReadPort(){
-  while (Serial.available() > 0) {  // чтение строки из последовательного порта
+  while (Serial1.available() > 0) {  // чтение строки из последовательного порта
       //---------------------------
-      String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
+      String line = Serial1.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
       line.toCharArray(buffer,10);//переводим в char
       LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
       AngularVelocity       = atof(strtok(NULL,  " "));
@@ -158,9 +153,8 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial.begin(9600);//Initialize the Serial port
-  lcd.begin(16, 2);
-  while (!Serial) ; // while the Serial stream is not open, do nothing
+  Serial1.begin(9600);//Initialize the Serial1 port
+  while (!Serial1) ; // while the Serial1 stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder
   PIDInit();  
@@ -243,19 +237,18 @@ void Timer_finish()  {
   wheelImpR = 0;
   wheelImpL = 0;
 
-  //printflag = true;
+  printflag = true;
 }
 
 void Print() {    // ==================== Вывод данных в порт
 
-    Serial.print (V); Serial.print ("; ");
-    Serial.print (yaw); Serial.print ("; ");
-    //Serial.print (omega); Serial.print ("; ");
-    Serial.print (x); Serial.print ("; ");
-    Serial.print (y); Serial.print ("; ");
-    //Serial.print(millis());
-    //Serial.println();
-    PrintLCD();
+    Serial1.print (V); Serial1.print ("; ");
+    Serial1.print (yaw); Serial1.print ("; ");
+    //Serial1.print (omega); Serial1.print ("; ");
+    Serial1.print (x); Serial1.print ("; ");
+    Serial1.print (y); Serial1.print ("; ");
+    Serial1.print(millis());
+    Serial1.println();
  }
 void Movement(int a,int b){//move
   analogWrite (MotorRpwm,a);      //motor1 move forward at speed a
@@ -286,17 +279,6 @@ void PIDMovement(double a,double b){
   Movement (int (Output1), int(Output2));
 }
 
-void PrintLCD(){  // ==================== Вывод данных на дисплей
-
-  // Дисплей, первая строка
-  String FS = "HELLO";  // бамперы  
-  // Дисплей, вторая строка
-
-  lcd.setCursor(0, 0);
-  lcd.print(LinearVelocity);
-  lcd.setCursor(0, 1);
-  lcd.print(AngularVelocity);
-
-} 
+  
       
 
