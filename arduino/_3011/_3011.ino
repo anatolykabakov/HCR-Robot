@@ -49,7 +49,7 @@ unsigned long wheelImpR = 0; // число импульсов с энкодер�
 unsigned long wheelImpL = 0; // число импульсов с энкодера левого колеса 
 
 //PID variables
-double Motor_2[3]={0.8,1.4,0};                //PID parameters [P,I,D]
+double Motor_2[3]={0.1,3,0};                //PID parameters [P,I,D]
 double Setpoint1,Input1,Output1;                   //PID input&output values for Motor1
 double Setpoint2,Input2,Output2;                   //PID input&output values for Motor2
 
@@ -107,7 +107,7 @@ void setup() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Главный цикл ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 void loop() { 
   // --------------- Чтение порта --------------------
-  get_messages_from_serial();
+  get_messages_from_Serial();
   // --------------- Смена уставки скорости ----------
   Motor();
   // -------------------------------------------------
@@ -254,7 +254,7 @@ void PIDMovement(double a,double b){
   Movement (int (Output1), int(Output2));
 }
 
-void get_messages_from_serial()
+void get_messages_from_Serial()
 {
   if(Serial.available() > 0)
   {
