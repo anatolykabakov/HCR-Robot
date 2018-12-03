@@ -149,8 +149,8 @@ void Init(){
 void PIDInit(){
   myPID1.SetMode(AUTOMATIC);
   myPID2.SetMode(AUTOMATIC);
-  myPID1.SetOutputLimits(0,255);
-  myPID2.SetOutputLimits(0,255);
+  myPID1.SetOutputLimits(-255,255);
+  myPID2.SetOutputLimits(-255,255);
 }
 void MotorsInit() { //Initialize motors variables 
   DirectionR = LOW;
