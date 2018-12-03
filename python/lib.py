@@ -13,6 +13,110 @@ L = 0.275
 k = 0.5  # control gain
 
 Kp = 1.0  # speed propotional gain
+import math
+import numpy as np
+
+
+#robot parameters
+radius = 0.0682
+length = L
+
+delta = 0.1
+class Model():
+    def __init__(self, radius, length):
+        #robot parameters
+        self.radius = radius
+        self.length = length
+        
+        self.delta = 0.1
+
+        self.model  = np.matrix(np.zeros((4, 1)))
+        self.hxModel = np.matrix(np.zeros((4, 1)))
+        
+        
+        
+    def motion_model(self, x, u):
+        """
+        Unicycle Motion Model
+
+        motion model
+        x_{t+1} = x_t+v*dt*cos(yaw)
+        y_{t+1} = y_t+v*dt*sin(yaw)
+        yaw_{t+1} = yaw_t+omega*dt
+        v_{t+1} = v{t}
+
+        """
+
+        A = np.matrix([[1.0, 0, 0, 0],
+                   [0, 1.0, 0, 0],
+                   [0, 0, 1.0, 0],
+                   [0, 0,   0, 0]])
+
+        B = np.matrix([[delta * math.cos(x[2, 0]), 0],
+                   [delta * math.sin(x[2, 0]), 0],
+                   [0.0, delta],
+                   [1.0, 0.0]])
+
+        x = A * x + B * u
+
+        return x
+
+    def get_motion_model(self, u):
+        self.model  = self.motion_model(self.model, u)
+        self.hxModel = np.hstack((self.hxModel, self.model))
+        return self.model, self.hxModel
+    
+               
+    
+    def diff_motion_model(self, model, v):
+        """
+        Differential Motion Model
+
+        motion model
+        x_{t+1} = x_t+radius*(Vl + Vr)*0.5*dt*cos(yaw)
+        y_{t+1} = y_t+radius*(Vl + Vr)*0.5**dt*sin(yaw)
+        yaw_{t+1} = yaw_t+radius/length*(Vl - Vr)*dt
+
+        """
+        F = np.matrix([[1.0, 0, 0, 0],
+                   [0, 1.0, 0, 0],
+                   [0, 0, 1.0, 0],
+                   [0, 0,   0, 1.0]])
+
+        B = np.matrix([[delta * radius * 0.5 * (v[0, 0] + v[1, 0]) * math.cos(model[2, 0])],
+                   [delta * radius * 0.5 * (v[0, 0] + v[1, 0]) * math.sin(model[2, 0])],
+                   [delta * (radius / length)*(v[1, 0] - v[0, 0])],
+                   [1.0]])
+
+        model = F * model + B 
+
+        return model
+
+
+
+    def uni_to_diff_model(self, u):
+        '''
+        v_r = ((2 * v) + (w * L)) / (2 * R)
+        v_l = ((2 * v) - (w * L)) / (2 * R)
+        '''
+    
+        Vr = ((2*u[0, 0]) + (u[1, 0]*length))/ (2*radius)
+        Vl = ((2*u[0, 0]) - (u[1, 0]*length))/ (2*radius)
+        V = np.matrix([Vl, Vr]).T
+        return V
+
+    def diff_to_uni(self, v):
+        '''    
+        v = ( R / 2.0 ) * ( v_r + v_l )
+        omega = ( R / L ) * ( v_r - v_l )
+        '''
+        vel = (radius/2) * (v[0, 0] + v[1, 0])
+        w = (radius/length) * (v[1, 0] - v[0, 0])
+
+        u = np.matrix([vel, w]).T#[v, omega]
+    
+        return u
+    
 class EKF():
     def __init__(self):
         # Model parameters
@@ -342,6 +446,27 @@ class Planning(object):
     def getTrack(self, ax, ay):
         cx, cy, cyaw, ck, s = self.calc_spline_course(ax, ay, ds=0.1)
         return cx, cy, cyaw
+
+    def move(self, robot):
+        kalman = EKF()
+        robot = Model(radius_wheel, length)
+        PEst = np.eye(4)
+        estimation = np.matrix(np.zeros((4, 1)))
+        hz = np.zeros((1, 2))
+        hz1 = np.zeros((1, 2))
+        hxK = estimation
+##        for i in range(int(seconds/dt)):
+        model, hxModel  = robot.get_motion_model(u)
+        z, z1 = get_gps_data(model)
+        kalman.predict(model, u)
+        kalman.update(z, R1)
+        kalman.update(z1, R2)
+        estimation, PEst = kalman.get_state()
+        hxK = np.hstack((hxK, estimation))
+        hz = np.vstack((hz, z))
+        hz1 = np.vstack((hz1, z1))
+##        plot(hxModel, hxK, hz, hz1)
+        
     
     def calc_target_index(self, robot, cx, cy):
         """
@@ -411,7 +536,7 @@ class Tracking(object):
 ##        """
 ##         Proportional control for the speed.
 ##        """
-        Kp = 1
+        Kp = 0.2
         return Kp * (target - current)
         
     def steer_control(self, cx, cy, cyaw):
@@ -427,10 +552,11 @@ class Tracking(object):
         current_target_idx, error_front_axle = self.planning.calc_target_index(self.robot, cx, cy)
         delta = normalize_angle(cyaw[current_target_idx] - self.robot.yaw)
         #print(str(cyaw[current_target_idx])+' - '+str(self.robot.yaw))
-        omega = delta/1
+        omega = delta/0.25
+        print(omega)
         return omega, current_target_idx
         
-    def motioncontrol(self, cx, cy, cyaw, target_speed=0.3):
+    def motioncontrol(self, cx, cy, cyaw, target_speed):
 ##        '''
 ##        функция реализует контроль движения по заданной траектории
 ##        включает в себя :
@@ -450,13 +576,14 @@ class Tracking(object):
             ai                = self.pid_control(target_speed, self.robot.v)
             omega, target_idx = self.steer_control(cx, cy, cyaw)# выход: угловая скорость поворота, и номер следующей точки
             if self.mode == 'pc':
-                self.robot.update(ai, omega)
+                self.robot.update(target_speed, omega)
             if self.mode == 'robot':
                 v = ai*self.robot.dt
                 self.robot.move(self.serial, target_speed, omega)
             x.append(self.robot.x)
             y.append(self.robot.y)
             plotxy(x,y, cx, cy)
+        self.robot.move(self.serial, 0, 0)
         return x, y
 
 class Robot(object):
@@ -516,100 +643,6 @@ class Robot(object):
     
     
 
-class Model():
-    def __init__(self, radius, length):
-        #robot parameters
-        self.radius = radius
-        self.length = length
-        
-        self.delta = 0.1
-
-        self.model  = np.matrix(np.zeros((4, 1)))
-        self.hxModel = np.matrix(np.zeros((4, 1)))
-        
-        
-        
-    def motion_model(self, x, u):
-        """
-        Unicycle Motion Model
-
-        motion model
-        x_{t+1} = x_t+v*dt*cos(yaw)
-        y_{t+1} = y_t+v*dt*sin(yaw)
-        yaw_{t+1} = yaw_t+omega*dt
-        v_{t+1} = v{t}
-
-        """
-
-        A = np.matrix([[1.0, 0, 0, 0],
-                   [0, 1.0, 0, 0],
-                   [0, 0, 1.0, 0],
-                   [0, 0,   0, 0]])
-
-        B = np.matrix([[delta * math.cos(x[2, 0]), 0],
-                   [delta * math.sin(x[2, 0]), 0],
-                   [0.0, delta],
-                   [1.0, 0.0]])
-
-        x = A * x + B * u
-
-        return x
-
-    def get_motion_model(self, u):
-        self.model  = self.motion_model(self.model, u)
-        self.hxModel = np.hstack((self.hxModel, self.model))
-        return self.model, self.hxModel
-    
-               
-    
-    def diff_motion_model(self, model, v):
-        """
-        Differential Motion Model
-
-        motion model
-        x_{t+1} = x_t+radius*(Vl + Vr)*0.5*dt*cos(yaw)
-        y_{t+1} = y_t+radius*(Vl + Vr)*0.5**dt*sin(yaw)
-        yaw_{t+1} = yaw_t+radius/length*(Vl - Vr)*dt
-
-        """
-        F = np.matrix([[1.0, 0, 0, 0],
-                   [0, 1.0, 0, 0],
-                   [0, 0, 1.0, 0],
-                   [0, 0,   0, 1.0]])
-
-        B = np.matrix([[delta * radius * 0.5 * (v[0, 0] + v[1, 0]) * math.cos(model[2, 0])],
-                   [delta * radius * 0.5 * (v[0, 0] + v[1, 0]) * math.sin(model[2, 0])],
-                   [delta * (radius / length)*(v[1, 0] - v[0, 0])],
-                   [1.0]])
-
-        model = F * model + B 
-
-        return model
-
-
-
-    def uni_to_diff_model(self, u):
-        '''
-        v_r = ((2 * v) + (w * L)) / (2 * R)
-        v_l = ((2 * v) - (w * L)) / (2 * R)
-        '''
-    
-        Vr = ((2*u[0, 0]) + (u[1, 0]*length))/ (2*radius)
-        Vl = ((2*u[0, 0]) - (u[1, 0]*length))/ (2*radius)
-        V = np.matrix([Vl, Vr]).T
-        return V
-
-    def diff_to_uni(self, v):
-        '''    
-        v = ( R / 2.0 ) * ( v_r + v_l )
-        omega = ( R / L ) * ( v_r - v_l )
-        '''
-        vel = (radius/2) * (v[0, 0] + v[1, 0])
-        w = (radius/length) * (v[1, 0] - v[0, 0])
-
-        u = np.matrix([vel, w]).T#[v, omega]
-    
-        return u
 
 
 def normalize_angle(angle):

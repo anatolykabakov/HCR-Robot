@@ -139,7 +139,7 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial1.begin(19200);//Initialize the Serial1 port
+  Serial1.begin(57600);//Initialize the Serial1 port
   while (!Serial1) ; // while the Serial1 stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder

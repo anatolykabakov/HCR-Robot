@@ -52,9 +52,12 @@ unsigned long wheelImpR = 0; // число импульсов с энкодер�
 unsigned long wheelImpL = 0; // число импульсов с энкодера левого колеса 
 
 //PID variables
-double Motor_2[3]={0.8,1.4,0};                //PID parameters [P,I,D]
+double Motor_2[3]={0.3,2,0};                //PID parameters [P,I,D]
+double kp = Motor_2[0];
+double ki = Motor_2[1];
 double Setpoint1,Input1,Output1;                   //PID input&output values for Motor1
 double Setpoint2,Input2,Output2;                   //PID input&output values for Motor2
+
 
 PID myPID1(&Input1,&Output1,&Setpoint1,Motor_2[0],Motor_2[1],Motor_2[2],DIRECT);  
 PID myPID2(&Input2,&Output2,&Setpoint2,Motor_2[0],Motor_2[1],Motor_2[2],DIRECT);
@@ -113,7 +116,7 @@ void loop() {
   // --------------- Смена уставки скорости ----------
   Motor();
   // -------------------------------------------------
-  //if (printflag) {printflag = false; Print();}
+  if (printflag) {printflag = false; Print();}
   delay(10);
  }
  //loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,19 +131,23 @@ void SetSpeed(double LinearVelocity, double AngularVelocity){
 void CheckSettingsSpeed(){
   if (settingSpeed){
       settingSpeed = false;
-      Print();
+      //Print();
       //printflag = true;
       SetSpeed(LinearVelocity, AngularVelocity);
+      myPID1.SetTunings(kp, ki, 0);
+      myPID2.SetTunings(kp, ki, 0);
     }
 }
 // --------------- Чтение порта --------------------
 void ReadPort(){
-  while (Serial.available() > 0) {  // чтение строки из последовательного порта
+  while (Serial1.available() > 0) {  // чтение строки из последовательного порта
       //---------------------------
-      String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
-      line.toCharArray(buffer,10);//переводим в char
+      String line = Serial1.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
+      line.toCharArray(buffer,20);//переводим в char
       LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
       AngularVelocity       = atof(strtok(NULL,  " "));
+      kp       = atof(strtok(NULL,  " "));
+      ki       = atof(strtok(NULL,  " "));
       if (line.length() > 0){settingSpeed = true;}
       if(line == "reset"){reset_var();}
       //if(left == 80){Print();}
@@ -158,9 +165,9 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial.begin(9600);//Initialize the Serial port
+  Serial1.begin(9600);//Initialize the Serial1 port
   lcd.begin(16, 2);
-  while (!Serial) ; // while the Serial stream is not open, do nothing
+  while (!Serial1) ; // while the Serial1 stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder
   PIDInit();  
@@ -169,8 +176,8 @@ void Init(){
 void PIDInit(){
   myPID1.SetMode(AUTOMATIC);
   myPID2.SetMode(AUTOMATIC);
-  myPID1.SetOutputLimits(-255,255);
-  myPID2.SetOutputLimits(-255,255);
+  myPID1.SetOutputLimits(0,255);
+  myPID2.SetOutputLimits(0,255);
 }
 void MotorsInit() { //Initialize motors variables 
   DirectionR = LOW;
@@ -243,21 +250,26 @@ void Timer_finish()  {
   wheelImpR = 0;
   wheelImpL = 0;
 
-  //printflag = true;
+  printflag = true;
 }
 
 void Print() {    // ==================== Вывод данных в порт
 
-    Serial.print (V); Serial.print ("; ");
-    Serial.print (yaw); Serial.print ("; ");
-    //Serial.print (omega); Serial.print ("; ");
-    Serial.print (x); Serial.print ("; ");
-    Serial.print (y); Serial.print ("; ");
-    //Serial.print(millis());
-    //Serial.println();
+    //Serial1.print (millis()); Serial1.print ("; ");
+    Serial1.print (LinearVelocity); Serial1.print ("; ");
+    //Serial1.print (omega); Serial1.print ("; ");
+    Serial1.print (Vr); Serial1.print ("; ");
+    Serial1.print (Vl); Serial1.print ("; ");
+    Serial1.print (kp); Serial1.print ("; ");
+    Serial1.print (ki); Serial1.print ("; ");
+    Serial1.print (Output1); Serial1.print ("; ");
+    //Serial1.print(millis());
+    Serial1.println();
     PrintLCD();
  }
 void Movement(int a,int b){//move
+  if (a < 13) {a = 0;}
+  if (b < 13) {b = 0;}
   analogWrite (MotorRpwm,a);      //motor1 move forward at speed a
   digitalWrite(MotorRdir,DirectionR);  
   analogWrite (MotorLpwm,b);      //motor2 move forward at speed b
