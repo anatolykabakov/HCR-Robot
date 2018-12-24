@@ -5,7 +5,7 @@ author: Atsushi Sakai (@Atsushi_twi)
 
 import numpy as np
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 # EKF state covariance

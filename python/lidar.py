@@ -10,6 +10,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(18, GPIO.OUT)
 p = GPIO.PWM(18, 2000)
 p.start(100)
+#sleep(1)
+#p.ChangeDutyCycle(100)
 
 Start_Scan = "\xA5\x20" #Begins scanning
 Force_Scan = "\xA5\x21" #Overrides anything preventing a scan
@@ -35,7 +37,7 @@ def getScan(port, col):
         return scan
 
 def startScan(port):
-        print "Connecting"
+        #print "Connecting"
         line = ""
         #Lock is true once connected
         lock = False
@@ -130,15 +132,24 @@ def point_XY(serial_frame):
 if __name__ == "__main__":
     #COM4 was used on my computer, this will change based on
     #your setup and whether you're on Windows/Mac/Linux
-    port = '/dev/ttyUSB0'
+    port = '/dev/ttyUSB1'
     ser = serial.Serial(port, 115200, timeout = 5)
     ser.setDTR(False)
     print ser.name
 
     #Create a Lidar instance, this will immidiately start printing.
     #To edit where the data is sent, edit the GetPoints Method
-    lidar = getScan(ser, 270)
-    print len(lidar)
-    for i in lidar:
-        print(i)
+    while True:
+        lidar = getScan(ser, 270)
+        print len(lidar)
+        for i in lidar:
+            print(i)
+    #lock = False
+    #lock = startScan(ser)
+   # while True:
+   #
+   #     if(lock):
+   #         for i in getPoints(ser, 10):
+   #             print(i)
+       # lock = startScan(ser)
 

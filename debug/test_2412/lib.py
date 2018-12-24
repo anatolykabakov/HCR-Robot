@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 import serial
 import math
@@ -247,7 +247,7 @@ class EKF_SLAM(object):
 
 
 class Planning(object):
-    def __init__(self, robot, serial, mode='robot'):
+    def __init__(self, robot, serial, lidar, mode='robot'):
         """Instantiate the object."""
         super(Planning, self).__init__()
         #--------Инициализация --------
@@ -255,6 +255,7 @@ class Planning(object):
         #------------------------------
         self.robot    = robot
         self.serial = serial
+        self.lidar = lidar
         self.tracking    = tracking = Tracking(robot, self, serial=serial, mode=mode, dt = 0.1)
         self.x = []
         self.y = []
@@ -275,7 +276,7 @@ class Planning(object):
             x_est, y_est, yaw_est = self.state_update(cx[target_idx], cy[target_idx], cyaw[target_idx])
             self.x.append(x_est)
             self.y.append(y_est)
-            plotxy(self.x,self.y, cx, cy)
+           # plotxy(self.x,self.y, cx, cy)
             print(millis())
         self.robot.move(self.serial, 0, 0)
         file.close()
@@ -295,8 +296,8 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
-        #scan = get_scan(lidar_serial, coll)
-        file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw)) + '\n') 
+        scan = get_scan(self.lidar, 360)
+        file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
 ##        u = np.matrix([self.robot.v, self.robot.omega]).T
 ##        RFID = get_LidarData()
@@ -415,7 +416,7 @@ class Tracking(object):
 ##        '''
         delta = normalize_angle(cyaw - yaw)
         
-        omega = delta/0.25
+        omega = delta
         if omega >1:
             omega = 1
         return omega
@@ -510,7 +511,7 @@ def get_LidarData():
                      [2.0, 2.0]])
     return RFID
 
-def read_scan(lidar_serial):
+def read_scan(ser):
     ser.write('s'.encode())
     line = ser.readline()
     s = line.decode().replace('\r\n','')
@@ -521,10 +522,12 @@ def read_scan(lidar_serial):
 
 def get_scan(lidar_serial, coll):
     scan = []
-    while not len(scan) == coll:
+    while len(scan) < coll:
         distance_mm, angle_grad = read_scan(lidar_serial)
         scan.append((distance_mm, angle_grad))
+        print("1")
     scan = points2distVec(scan)
+    print("2")
     return scan
 
 def points2distVec(points):
@@ -533,11 +536,11 @@ def points2distVec(points):
     for point in points: # create breezySLAM-compatible data from raw scan data
       dist = point[0]
       index = int(point[1])
-      if not 0 <= index < self.scanSize: continue
+      if not 0 <= index < 360: continue
       distVec[index] = int(dist)
 
     # note that breezySLAM switches the x- and y- axes (their x is forward, 0deg; y is right, +90deg)
-    distVec = [distVec[i-180] for i in range(self.scanSize)] # rotate scan data so middle of vector is straight ahead, 0deg
+    distVec = [distVec[i-180] for i in range(0, 360)] # rotate scan data so middle of vector is straight ahead, 0deg
     return distVec
 
 def plotKalman(hxTrue, hxK, hz, hz1):
