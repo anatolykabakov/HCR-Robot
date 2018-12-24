@@ -525,7 +525,7 @@ def get_scan(lidar_serial, coll):
     while len(scan) < coll:
         distance_mm, angle_grad = read_scan(lidar_serial)
         scan.append((distance_mm, angle_grad))
-        print("1")
+        print(len(scan))
     scan = points2distVec(scan)
     print("2")
     return scan
@@ -536,7 +536,7 @@ def points2distVec(points):
     for point in points: # create breezySLAM-compatible data from raw scan data
       dist = point[0]
       index = int(point[1])
-      if not 0 <= index < 360: continue
+      if not 0 <= index < len(points): continue
       distVec[index] = int(dist)
 
     # note that breezySLAM switches the x- and y- axes (their x is forward, 0deg; y is right, +90deg)
