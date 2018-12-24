@@ -296,7 +296,6 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
-        
         scan = get_scan(self.lidar, 1)
         file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
