@@ -296,7 +296,7 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
-        scan = get_scan(self.lidar, 1)
+        scan = get_scan(self.lidar, 10)
         file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
 ##        u = np.matrix([self.robot.v, self.robot.omega]).T
@@ -525,8 +525,8 @@ def get_scan(lidar_serial, coll):
     while len(scan) < coll:
         distance_mm, angle_grad = read_scan(lidar_serial)
         scan.append((distance_mm, angle_grad))
-        print(len(scan))
-    scan = points2distVec(scan)
+        #print(len(scan))
+    #scan = points2distVec(scan)
     #print("2")
     return scan
 
