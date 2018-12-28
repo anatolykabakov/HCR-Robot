@@ -514,8 +514,11 @@ def get_LidarData():
 def read_scan(ser):
     ser.write('s'.encode())
     line = ser.readline()
+    if line == '':
+        print('empty read lidar!')
     s = line.decode().replace('\r\n','')
     new_s = s.split(':')
+    print(new_s)
     distance_mm = float(new_s[0])
     angle_grad = float(new_s[1])
     return distance_mm, angle_grad
