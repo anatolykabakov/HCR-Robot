@@ -296,7 +296,7 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
-        scan = get_scan(self.lidar, 1)
+        scan = get_scan(self.lidar, 100)
         file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
 ##        u = np.matrix([self.robot.v, self.robot.omega]).T
@@ -511,6 +511,38 @@ def get_LidarData():
                      [2.0, 2.0]])
     return RFID
 
+def preprocc(ser):
+    line = None
+    new_x =0
+    new_y =0
+    old_x =0
+    old_y =0
+    ser.write('s'.encode())
+    time.sleep(0.001)
+    if(ser.inWaiting()):
+        line = ser.readline()
+        s = line.decode().replace('\r\n','')
+        new_s = s.split(':')
+        distance_mm = float(new_s[0])
+        angle_grad = float(new_s[1])
+        if 0 <= angle_grad <= 360 and 0 <= distance_mm <= 6000:
+            dist_meters = distance_mm/1000
+            angle_rad = angle_grad*3.14/180
+            x = dist_meters*math.cos(angle_rad)
+            y = dist_meters*math.sin(angle_rad)
+            old_x = new_x
+            old_y = new_y
+            new_x = x
+            new_y = y
+            if x == "None" and y == "None": ser.write("f".encode())
+            return new_x, new_y
+        else: return old_x, old_y
+    else :
+        print("None")
+        preprocc(ser)
+        ser.write("f".encode())
+        return old_x, old_y
+
 def read_scan(ser):
     ser.write('s'.encode())
     line = ser.readline()
@@ -523,9 +555,11 @@ def read_scan(ser):
 def get_scan(lidar_serial, coll):
     scan = []
     while len(scan) < coll:
-        distance_mm, angle_grad = read_scan(lidar_serial)
-        scan.append((distance_mm, angle_grad))
-        print(len(scan))
+        #distance_mm, angle_grad = read_scan(lidar_serial)
+        x, y = preprocc(lidar_serial)
+        scan.append((x, y))
+    print(len(scan))
+        
     scan = points2distVec(scan)
     #print("2")
     return scan
