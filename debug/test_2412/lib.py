@@ -296,11 +296,15 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
+<<<<<<< HEAD
 #<<<<<<< HEAD
 #        scan = get_scan(self.lidar, 100)
 #=======
         scan = get_scan(self.lidar, 10)
 #>>>>>>> c17966d5b297905e0b93b6f239831456a9767361
+=======
+        scan = get_scan(self.lidar, 100)
+>>>>>>> 7fdeea20bfaf3786d70ae7461448ce3752f12d14
         file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
 ##        u = np.matrix([self.robot.v, self.robot.omega]).T
@@ -522,7 +526,7 @@ def preprocc(ser):
     old_x =0
     old_y =0
     ser.write('s'.encode())
-    time.sleep(0.001)
+    time.sleep(0.01)
     if(ser.inWaiting()):
         line = ser.readline()
         s = line.decode().replace('\r\n','')
@@ -538,20 +542,23 @@ def preprocc(ser):
             old_y = new_y
             new_x = x
             new_y = y
-            if x == "None" and y == "None": ser.write("f".encode())
+            if x == "None" and y == "None": ser.write("s".encode())
             return new_x, new_y
         else: return old_x, old_y
     else :
         print("None")
-        preprocc(ser)
-        ser.write("f".encode())
+       # preprocc(ser)
+        ser.write("s".encode())
         return old_x, old_y
 
 def read_scan(ser):
     ser.write('s'.encode())
     line = ser.readline()
+    if line == '':
+        print('empty read lidar!')
     s = line.decode().replace('\r\n','')
     new_s = s.split(':')
+    print(new_s)
     distance_mm = float(new_s[0])
     angle_grad = float(new_s[1])
     return distance_mm, angle_grad
@@ -559,11 +566,15 @@ def read_scan(ser):
 def get_scan(lidar_serial, coll):
     scan = []
     while len(scan) < coll:
+<<<<<<< HEAD
 ##<<<<<<< HEAD
+=======
+>>>>>>> 7fdeea20bfaf3786d70ae7461448ce3752f12d14
         #distance_mm, angle_grad = read_scan(lidar_serial)
         x, y = preprocc(lidar_serial)
         scan.append((x, y))
     print(len(scan))
+<<<<<<< HEAD
         
     scan = points2distVec(scan)
 ##=======
@@ -573,6 +584,8 @@ def get_scan(lidar_serial, coll):
 ##    #scan = points2distVec(scan)
 ##>>>>>>> c17966d5b297905e0b93b6f239831456a9767361
     #print("2")
+=======
+>>>>>>> 7fdeea20bfaf3786d70ae7461448ce3752f12d14
     return scan
 
 def points2distVec(points):
