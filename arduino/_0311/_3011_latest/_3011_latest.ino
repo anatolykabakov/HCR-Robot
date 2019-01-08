@@ -107,7 +107,7 @@ void setup() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Главный цикл ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 void loop() { 
   // --------------- Чтение порта --------------------
-  get_messages_from_Serial();
+  get_messages_from_Serial1();
   // --------------- Смена уставки скорости ----------
   Motor();
   // -------------------------------------------------
@@ -139,8 +139,8 @@ void reset_var(){
 }
 void Init(){
   Wire.begin();
-  Serial.begin(115200);//Initialize the Serial port
-  while (!Serial) ; // while the Serial stream is not open, do nothing
+  Serial1.begin(57600);//Initialize the Serial1 port
+  while (!Serial1) ; // while the Serial1 stream is not open, do nothing
   MotorsInit();
   EncoderInit();//Initialize encoder
   PIDInit();  
@@ -256,12 +256,12 @@ void PIDMovement(double a,double b){
   Movement (int (Output1), int(Output2));
 }
 
-void get_messages_from_Serial()
+void get_messages_from_Serial1()
 {
-  if(Serial.available() > 0)
+  if(Serial1.available() > 0)
   {
     // The first byte received is the instruction
-    int order_received = Serial.read();
+    int order_received = Serial1.read();
 
     if(order_received == 's')
     {
@@ -269,7 +269,7 @@ void get_messages_from_Serial()
       if(!is_connected)
       {
         is_connected = true;
-        Serial.print("r");
+        Serial1.print("r");
       }
     }
     else
@@ -280,7 +280,7 @@ void get_messages_from_Serial()
         case 'v'://если v, то считываем уставку по скорости
         {
 
-          String line = Serial.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
+          String line = Serial1.readStringUntil('\n');// считываем скорости для левого и правого колеса [40 50]
           line.toCharArray(buffer,10);//переводим в char
           LinearVelocity        = atof(strtok(buffer," "));//разделяем на скорости левого и правого колеса
           AngularVelocity       = atof(strtok(NULL,  " "));
@@ -290,14 +290,14 @@ void get_messages_from_Serial()
         }
         case 'd'://если d, то печатаем текущие значения
         {
-          if(V>=0){Serial.print ("+");Serial.print (V); Serial.print (";");}
-          else {Serial.print (V); Serial.print (";");}
-          if(yaw>=0){Serial.print ("+");Serial.print (yaw); Serial.print (";");}
-          else {Serial.print (yaw); Serial.print (";");}
-          if(x>=0){Serial.print ("+");Serial.print (x); Serial.print (";");}
-          else {Serial.print (x); Serial.print (";");}
-          if(y>=0){Serial.print ("+");Serial.print (y); Serial.print (";");}
-          else {Serial.print (y); Serial.print (";");}
+          if(V>=0){Serial1.print ("+");Serial1.print (V); Serial1.print (";");}
+          else {Serial1.print (V); Serial1.print (";");}
+          if(yaw>=0){Serial1.print ("+");Serial1.print (yaw); Serial1.print (";");}
+          else {Serial1.print (yaw); Serial1.print (";");}
+          if(x>=0){Serial1.print ("+");Serial1.print (x); Serial1.print (";");}
+          else {Serial1.print (x); Serial1.print (";");}
+          if(y>=0){Serial1.print ("+");Serial1.print (y); Serial1.print (";");}
+          else {Serial1.print (y); Serial1.print (";");}
           
           break;
         }
@@ -307,7 +307,7 @@ void get_messages_from_Serial()
           return;
       }
     }
-    Serial.print("c");
+    Serial1.print("c");
  
   }
 }

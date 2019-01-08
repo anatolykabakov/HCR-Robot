@@ -296,11 +296,11 @@ class Planning(object):
         yaw = self.robot.yaw
         #------------------------------------------------------
         timestamp = millis()
-<<<<<<< HEAD
-        scan = get_scan(self.lidar, 100)
-=======
+#<<<<<<< HEAD
+#        scan = get_scan(self.lidar, 100)
+#=======
         scan = get_scan(self.lidar, 10)
->>>>>>> c17966d5b297905e0b93b6f239831456a9767361
+#>>>>>>> c17966d5b297905e0b93b6f239831456a9767361
         file.write(str(str(round(timestamp, 0)) + ';' + str(x) + ';' + str(y) + ';' + str(yaw) + ';' + str(scan)) + '\n') 
         #------------------------------------------------------
 ##        u = np.matrix([self.robot.v, self.robot.omega]).T
@@ -559,19 +559,19 @@ def read_scan(ser):
 def get_scan(lidar_serial, coll):
     scan = []
     while len(scan) < coll:
-<<<<<<< HEAD
+##<<<<<<< HEAD
         #distance_mm, angle_grad = read_scan(lidar_serial)
         x, y = preprocc(lidar_serial)
         scan.append((x, y))
     print(len(scan))
         
     scan = points2distVec(scan)
-=======
-        distance_mm, angle_grad = read_scan(lidar_serial)
-        scan.append((distance_mm, angle_grad))
-        #print(len(scan))
-    #scan = points2distVec(scan)
->>>>>>> c17966d5b297905e0b93b6f239831456a9767361
+##=======
+##        distance_mm, angle_grad = read_scan(lidar_serial)
+##        scan.append((distance_mm, angle_grad))
+##        #print(len(scan))
+##    #scan = points2distVec(scan)
+##>>>>>>> c17966d5b297905e0b93b6f239831456a9767361
     #print("2")
     return scan
 

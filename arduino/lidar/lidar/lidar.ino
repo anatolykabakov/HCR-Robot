@@ -1,4 +1,4 @@
-/*
+ /*
  * RoboPeak RPLIDAR Arduino Example
  * This example shows the easy and common way to fetch data from an RPLIDAR
  * 
@@ -65,25 +65,26 @@ void loop() {
   if (IS_OK(lidar.waitPoint())) {
     float distance = lidar.getCurrentPoint().distance; //distance value in mm unit
     float angle    = lidar.getCurrentPoint().angle; //anglue value in degree
-    bool  startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
-    byte  quality  = lidar.getCurrentPoint().quality; //quality of the current measurement
-    if(Serial_2.available() > 0){
-      // The first byte received is the instruction
-      int order_received = Serial_2.read();
-      if(order_received == 's')
-      {
-        // If the cards haven't say hello, check the connection
-        Serial_2.print(distance);
-        Serial_2.print(" : ");
-        Serial_2.print(angle);
-        Serial_2.println();
+    //bool  startBit = lidar.getCurrentPoint().startBit; //whether this point is belong to a new scan
+    //byte  quality  = lidar.getCurrentPoint().quality; //quality of the current measurement
+    //if (lidar.getCurrentPoint().startBit){
+    //if (abs(distance) == 0 && abs(distance) == 0){lidarfix();}
+      if(Serial_2.available() > 0){
+        // The first byte received is the instruction
+        int order_received = Serial_2.read();
+        if(order_received == 's'){Serial_2.print(distance);Serial_2.print(" : ");Serial_2.print(angle);Serial_2.println();}
+        if(order_received == 'f'){lidarfix();}
       }
-    }
+    //}
     //perform data processing here... 
-    
-    
-  } else {
-    analogWrite(RPLIDAR_MOTOR, 0); //stop the rplidar motor
+    //Serial_2.print(distance);Serial_2.print(" : ");Serial_2.print(angle);Serial_2.println();
+  } 
+  else {
+    lidarfix();
+  }
+}
+void lidarfix(){
+  analogWrite(RPLIDAR_MOTOR, 0); //stop the rplidar motor
     
     // try to detect RPLIDAR... 
     rplidar_response_device_info_t info;
@@ -95,5 +96,4 @@ void loop() {
        analogWrite(RPLIDAR_MOTOR, 255);
        delay(1000);
     }
-  }
-}
+ }
